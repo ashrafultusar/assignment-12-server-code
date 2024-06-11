@@ -207,6 +207,11 @@ async function run() {
       res.send(result);
     });
 
+    app.post("/announcement", async (req, res) => {
+      const announceData = req.body;
+      const result = await announcementCollection.insertOne(announceData);
+      res.send(result);
+    });
 
     // get all announcement from db
     app.get('/announcement', async (req, res) => {
@@ -214,6 +219,7 @@ async function run() {
       res.send(result)
 
     })
+
 
 
     // app.get('/mypost/:email', async (req, res) => {
