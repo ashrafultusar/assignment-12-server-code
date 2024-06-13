@@ -34,6 +34,7 @@ async function run() {
     const allPostCollection = client.db("ConvoHub").collection("allPost");
     const userCollection = client.db("ConvoHub").collection("users");
     const announcementCollection = client.db("ConvoHub").collection("announcement");
+    const paymentCollection = client.db("ConvoHub").collection("payment");
 
     // jwt api
     app.post("/jwt", async (req, res) => {
@@ -94,27 +95,8 @@ async function run() {
       next();
     };
 
-    // payment intent
-    app.post("/create-payment-intent", async (req, res) => {
-      const price = req.body.price;
-      const priceInCent = parseFloat(price) * 100;
+   
 
-      if (!price || priceInCent < 1) return;
-
-      const { client_secret } = await stripe.paymentIntents.create({
-        amount: priceInCent,
-        currency: "usd",
-
-        automatic_payment_methods: {
-          enabled: true,
-        },
-      });
-      res.send({ clientSecret: client_secret });
-    });
-
-// test update
-// test update
-// test update
 
     // save user data in db
     app.put("/user", async (req, res) => {
@@ -153,7 +135,7 @@ async function run() {
     });
 
     // get all user on db and show admin ui
-    app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
+    app.get("/users",  async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
@@ -224,21 +206,51 @@ async function run() {
 
     })
 
+    
+ // payment intent
+ app.post("/create-payment-intent", async (req, res) => {
+  const price = req.body.price;
+  const priceInCent = parseFloat(price) * 100;
+
+  if (!price || priceInCent < 1) return;
+
+  const { client_secret } = await stripe.paymentIntents.create({
+    amount: priceInCent,
+    currency: "usd",
+
+    automatic_payment_methods: {
+      enabled: true,
+    },
+  });
+  res.send({ clientSecret: client_secret });
+});
 
 
-    // app.get('/mypost/:email', async (req, res) => {
-    //   const email = req.params.email;
-    //   console.log(`Fetching posts for email: ${email}`); // Logging request
-    //   let query = { email: email };
-    //   try {
-    //     const result = await allPostCollection.find(query).toArray();
-    //     console.log('Posts fetched:', result); // Logging result
-    //     res.send(result);
-    //   } catch (error) {
-    //     console.error('Error fetching posts:', error); // Logging error
-    //     res.status(500).send({ message: 'Error fetching posts', error });
-    //   }
-    // });
+
+    // payment 
+    app.post("/payment", async (req, res) => {
+      const paymentData = req.body;
+      const result = await paymentCollection.insertOne(paymentData);
+      res.send(result);
+    });
+
+
+
+    app.patch('/user/status/:email', async (req, res) => {
+      const email = req.params.email
+      const query = { email: email }
+      const updateDoc = {
+        
+        $set:{badges: "Gold"}
+      }
+ 
+      const result = await userCollection.updateOne(query, updateDoc)
+      res.send(result)
+      
+    })
+
+
+    
 
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
