@@ -214,7 +214,7 @@ async function run() {
     });
 
     // get all announcement from db
-    app.get('/announcement', async (req, res) => {
+    app.get('/announcements', async (req, res) => {
       const result = await announcementCollection.find().toArray()
       res.send(result)
 
