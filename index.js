@@ -11,7 +11,7 @@ const port = process.env.PORT || 5000;
 // middleware
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:5174"],
+    origin: ["http://localhost:5173", "http://localhost:5174","https://assignment-12-8db85.firebaseapp.com"],
     credentials: true,
   })
 );
@@ -155,7 +155,7 @@ async function run() {
       res.send(result);
     });
 
-    // all rooms from DB
+    // all posts from DB
     app.get("/posts", async (req, res) => {
       const result = await allPostCollection.find().toArray();
       res.send(result);
@@ -250,15 +250,30 @@ async function run() {
     })
 
 
-    
+
+    // admin profile statistic
+    app.get('/admin-stats', async (req, res) => {
+      const users = await userCollection.estimatedDocumentCount();
+
+      const posts = await allPostCollection.estimatedDocumentCount()
+      
+
+
+      res.send({
+        users,posts
+      })
+
+    })
+
+
 
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    // await client.db("admin").command({ ping: 1 });
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // );
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
