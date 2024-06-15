@@ -5,13 +5,17 @@ const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 
-
 const port = process.env.PORT || 5000;
 
 // middleware
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:5174","https://assignment-12-8db85.firebaseapp.com","https://assignment-12-8db85.web.app"],
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "https://assignment-12-8db85.firebaseapp.com",
+      "https://assignment-12-8db85.web.app",
+    ],
     credentials: true,
   })
 );
@@ -33,7 +37,9 @@ async function run() {
   try {
     const allPostCollection = client.db("ConvoHub").collection("allPost");
     const userCollection = client.db("ConvoHub").collection("users");
-    const announcementCollection = client.db("ConvoHub").collection("announcement");
+    const announcementCollection = client
+      .db("ConvoHub")
+      .collection("announcement");
     const paymentCollection = client.db("ConvoHub").collection("payment");
 
     // jwt api
@@ -95,9 +101,6 @@ async function run() {
       next();
     };
 
-   
-
-
     // save user data in db
     app.put("/user", async (req, res) => {
       const user = req.body;
@@ -135,7 +138,7 @@ async function run() {
     });
 
     // get all user on db and show admin ui
-    app.get("/users",  async (req, res) => {
+    app.get("/users", async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
@@ -155,9 +158,18 @@ async function run() {
       res.send(result);
     });
 
-    // all posts from DB
+    // all posts get from DB
     app.get("/posts", async (req, res) => {
-      const result = await allPostCollection.find().sort({post_time:-1}).toArray();
+      const search = req.query;
+      const query = {
+        tag: {
+          $regex: search.search,$options: "i"},
+      };
+
+      const result = await allPostCollection
+        .find(query)
+        .sort({ post_time: -1 })
+        .toArray();
       res.send(result);
     });
 
@@ -177,43 +189,43 @@ async function run() {
     //   res.send(result);
     // });
 
-    
     // add post on db
-app.post("/post", async (req, res) => {
-  const email = req.body.email;
-  const roomData = req.body;
+    app.post("/post", async (req, res) => {
+      const email = req.body.email;
+      const roomData = req.body;
 
-  console.log(req.body ,"body")
-  try {
-    // Fetch the user to check their badge status
-    const user = await userCollection.findOne({ email: email });
-    console.log(user);
-    if (!user) {
-      return res.status(404).send({ message: "User not found" });
-    }
+      console.log(req.body, "body");
+      try {
+        // Fetch the user to check their badge status
+        const user = await userCollection.findOne({ email: email });
+        console.log(user);
+        if (!user) {
+          return res.status(404).send({ message: "User not found" });
+        }
 
-    if (user.badges === 'bronze') {
-      // Check the post count for the normal user
-      const postCount = await allPostCollection.countDocuments({ email: email });
-      console.log(postCount,"post count");
-      if (postCount > 5) {
-        return res.send({
-          message: "You have reached the limit of 5 posts. Become a member to add more posts.",
-          redirectToMembership: true
-        });
+        if (user.badges === "bronze") {
+          // Check the post count for the normal user
+          const postCount = await allPostCollection.countDocuments({
+            email: email,
+          });
+          console.log(postCount, "post count");
+          if (postCount > 5) {
+            return res.send({
+              message:
+                "You have reached the limit of 5 posts. Become a member to add more posts.",
+              redirectToMembership: true,
+            });
+          }
+        }
+
+        // If the user is premium or has not exceeded the post limit, insert the new post
+        const result = await allPostCollection.insertOne(roomData);
+        res.send(result);
+      } catch (error) {
+        console.error("Error adding post:", error);
+        res.status(500).send({ message: " Error" });
       }
-    }
-
-    // If the user is premium or has not exceeded the post limit, insert the new post
-    const result = await allPostCollection.insertOne(roomData);
-    res.send(result);
-
-  } catch (error) {
-    console.error('Error adding post:', error);
-    res.status(500).send({ message: " Error" });
-  }
-});
-    
+    });
 
     // get post from user
     app.get("/mypost/:email", async (req, res) => {
@@ -238,72 +250,58 @@ app.post("/post", async (req, res) => {
     });
 
     // get all announcement from db
-    app.get('/announcements', async (req, res) => {
-      const result = await announcementCollection.find().toArray()
-      res.send(result)
+    app.get("/announcements", async (req, res) => {
+      const result = await announcementCollection.find().toArray();
+      res.send(result);
+    });
 
-    })
+    // payment intent
+    app.post("/create-payment-intent", async (req, res) => {
+      const price = req.body.price;
+      const priceInCent = parseFloat(price) * 100;
 
-    
- // payment intent
- app.post("/create-payment-intent", async (req, res) => {
-  const price = req.body.price;
-  const priceInCent = parseFloat(price) * 100;
+      if (!price || priceInCent < 1) return;
 
-  if (!price || priceInCent < 1) return;
+      const { client_secret } = await stripe.paymentIntents.create({
+        amount: priceInCent,
+        currency: "usd",
 
-  const { client_secret } = await stripe.paymentIntents.create({
-    amount: priceInCent,
-    currency: "usd",
+        automatic_payment_methods: {
+          enabled: true,
+        },
+      });
+      res.send({ clientSecret: client_secret });
+    });
 
-    automatic_payment_methods: {
-      enabled: true,
-    },
-  });
-  res.send({ clientSecret: client_secret });
-});
-
-
-
-    // payment 
+    // payment
     app.post("/payment", async (req, res) => {
       const paymentData = req.body;
       const result = await paymentCollection.insertOne(paymentData);
       res.send(result);
     });
 
-
-
-    app.patch('/user/status/:email', async (req, res) => {
-      const email = req.params.email
-      const query = { email: email }
+    app.patch("/user/status/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
       const updateDoc = {
-        
-        $set:{badges: "Gold"}
-      }
- 
-      const result = await userCollection.updateOne(query, updateDoc)
-      res.send(result)
-      
-    })
+        $set: { badges: "Gold" },
+      };
 
-
+      const result = await userCollection.updateOne(query, updateDoc);
+      res.send(result);
+    });
 
     // admin profile statistic
-    app.get('/admin-stats', async (req, res) => {
+    app.get("/admin-stats", async (req, res) => {
       const users = await userCollection.estimatedDocumentCount();
 
-      const posts = await allPostCollection.estimatedDocumentCount()
-      
-
+      const posts = await allPostCollection.estimatedDocumentCount();
 
       res.send({
-        users,posts
-      })
-
-    })
-
-
+        users,
+        posts,
+      });
+    });
 
     // Connect the client to the server	(optional starting in v4.7)
     // await client.connect();
