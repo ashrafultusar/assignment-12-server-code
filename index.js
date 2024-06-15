@@ -157,7 +157,7 @@ async function run() {
 
     // all posts from DB
     app.get("/posts", async (req, res) => {
-      const result = await allPostCollection.find().toArray();
+      const result = await allPostCollection.find().sort({post_time:-1}).toArray();
       res.send(result);
     });
 
@@ -170,14 +170,52 @@ async function run() {
     });
 
     // add post on db
-    app.post("/post", async (req, res) => {
-      const roomData = req.body;
-      const result = await allPostCollection.insertOne(roomData);
-      res.send(result);
-    });
+
+    // app.post("/post", async (req, res) => {
+    //   const roomData = req.body;
+    //   const result = await allPostCollection.insertOne(roomData);
+    //   res.send(result);
+    // });
+
+    
+    // add post on db
+app.post("/post", async (req, res) => {
+  const email = req.body.email;
+  const roomData = req.body;
+
+  console.log(req.body ,"body")
+  try {
+    // Fetch the user to check their badge status
+    const user = await userCollection.findOne({ email: email });
+    console.log(user);
+    if (!user) {
+      return res.status(404).send({ message: "User not found" });
+    }
+
+    if (user.badges === 'bronze') {
+      // Check the post count for the normal user
+      const postCount = await allPostCollection.countDocuments({ email: email });
+      console.log(postCount,"post count");
+      if (postCount > 5) {
+        return res.send({
+          message: "You have reached the limit of 5 posts. Become a member to add more posts.",
+          redirectToMembership: true
+        });
+      }
+    }
+
+    // If the user is premium or has not exceeded the post limit, insert the new post
+    const result = await allPostCollection.insertOne(roomData);
+    res.send(result);
+
+  } catch (error) {
+    console.error('Error adding post:', error);
+    res.status(500).send({ message: " Error" });
+  }
+});
+    
 
     // get post from user
-
     app.get("/mypost/:email", async (req, res) => {
       const email = req.params.email;
       let query = { email: email };
