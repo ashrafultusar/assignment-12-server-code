@@ -41,6 +41,7 @@ async function run() {
       .db("ConvoHub")
       .collection("announcement");
     const paymentCollection = client.db("ConvoHub").collection("payment");
+    const commentCollection = client.db("ConvoHub").collection("comments");
 
     // jwt api
     app.post("/jwt", async (req, res) => {
@@ -243,6 +244,8 @@ async function run() {
       res.send(result);
     });
 
+
+    // upload cannouncement
     app.post("/announcement", async (req, res) => {
       const announceData = req.body;
       const result = await announcementCollection.insertOne(announceData);
@@ -255,6 +258,29 @@ async function run() {
       res.send(result);
     });
 
+    // upload comment
+    // app.post("/comment", async (req, res) => {
+    //   const commentData = req.body
+    //   const result = await commentCollection.insertOne(commentData)
+    //   res.send(result)
+
+    // })
+    app.post("/comment", async (req, res) => {
+      try {
+        const commentData = req.body;
+        await commentCollection.insertOne(commentData);
+        
+        // Fetch all comments for the given postId
+        const comments = await commentCollection.find({ postId: commentData.postId }).toArray();
+        
+        res.send(comments);
+      } catch (err) {
+        console.error('Failed to insert comment', err);
+        res.status(500).send({ error: 'Failed to insert comment' });
+      }
+    });
+
+  
     // payment intent
     app.post("/create-payment-intent", async (req, res) => {
       const price = req.body.price;
