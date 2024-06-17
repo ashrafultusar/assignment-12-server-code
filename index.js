@@ -42,6 +42,7 @@ async function run() {
       .collection("announcement");
     const paymentCollection = client.db("ConvoHub").collection("payment");
     const commentCollection = client.db("ConvoHub").collection("comments");
+    const tagCollection = client.db("ConvoHub").collection("tag");
 
     // jwt api
     app.post("/jwt", async (req, res) => {
@@ -252,6 +253,20 @@ async function run() {
       res.send(result);
     });
 
+
+    // added tag on admin
+    app.post("/tag", async (req, res) => {
+      const announceData = req.body;
+      const result = await tagCollection.insertOne(announceData);
+      res.send(result);
+    });
+
+    // get all tag
+    app.get("/tags", async (req, res) => {
+      const result = await tagCollection.find().toArray();
+      res.send(result);
+    });
+
     // get all announcement from db
     app.get("/announcements", async (req, res) => {
       const result = await announcementCollection.find().toArray();
@@ -322,10 +337,12 @@ async function run() {
       const users = await userCollection.estimatedDocumentCount();
 
       const posts = await allPostCollection.estimatedDocumentCount();
+      const comment = await commentCollection.estimatedDocumentCount();
 
       res.send({
         users,
         posts,
+        comment
       });
     });
 
