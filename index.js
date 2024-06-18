@@ -183,13 +183,9 @@ async function run() {
       res.send(result);
     });
 
-    // add post on db
 
-    // app.post("/post", async (req, res) => {
-    //   const roomData = req.body;
-    //   const result = await allPostCollection.insertOne(roomData);
-    //   res.send(result);
-    // });
+
+
 
     // add post on db
     app.post("/post", async (req, res) => {
@@ -246,7 +242,7 @@ async function run() {
     });
 
 
-    // upload cannouncement
+    // upload announcement
     app.post("/announcement", async (req, res) => {
       const announceData = req.body;
       const result = await announcementCollection.insertOne(announceData);
@@ -274,12 +270,14 @@ async function run() {
     });
 
     // upload comment
+
     // app.post("/comment", async (req, res) => {
     //   const commentData = req.body
     //   const result = await commentCollection.insertOne(commentData)
     //   res.send(result)
 
     // })
+
     app.post("/comment", async (req, res) => {
       try {
         const commentData = req.body;
@@ -295,7 +293,13 @@ async function run() {
       }
     });
 
-  
+    // comment load
+    app.get("/comments", async (req, res) => {
+      const postId = req.query.postId;
+      const result = await commentCollection.find({ postId: postId }).toArray();
+      res.send(result);
+    });
+    
     // payment intent
     app.post("/create-payment-intent", async (req, res) => {
       const price = req.body.price;
@@ -347,6 +351,7 @@ async function run() {
     });
 
     // Connect the client to the server	(optional starting in v4.7)
+    
     // await client.connect();
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
