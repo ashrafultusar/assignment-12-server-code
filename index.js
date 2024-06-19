@@ -43,6 +43,8 @@ async function run() {
     const paymentCollection = client.db("ConvoHub").collection("payment");
     const commentCollection = client.db("ConvoHub").collection("comments");
     const tagCollection = client.db("ConvoHub").collection("tag");
+    const upVoteCollection = client.db("ConvoHub").collection("upvote");
+    const downvoteCollection = client.db("ConvoHub").collection("downvote");
 
     // jwt api
     app.post("/jwt", async (req, res) => {
@@ -183,10 +185,6 @@ async function run() {
       res.send(result);
     });
 
-
-
-
-
     // add post on db
     app.post("/post", async (req, res) => {
       const email = req.body.email;
@@ -241,14 +239,12 @@ async function run() {
       res.send(result);
     });
 
-
     // upload announcement
     app.post("/announcement", async (req, res) => {
       const announceData = req.body;
       const result = await announcementCollection.insertOne(announceData);
       res.send(result);
     });
-
 
     // added tag on admin
     app.post("/tag", async (req, res) => {
@@ -270,13 +266,6 @@ async function run() {
     });
 
     // upload comment
-
-    // app.post("/comment", async (req, res) => {
-    //   const commentData = req.body
-    //   const result = await commentCollection.insertOne(commentData)
-    //   res.send(result)
-
-    // })
 
     app.post("/comment", async (req, res) => {
       try {
@@ -316,7 +305,7 @@ async function run() {
         },
       });
       res.send({ clientSecret: client_secret });
-    });
+    }); 
 
     // payment
     app.post("/payment", async (req, res) => {
@@ -350,6 +339,43 @@ async function run() {
       });
     });
 
+    // upvote post
+    app.post('/upvote', async (req, res) => {
+      const upvote = req.body;
+      const result = await upVoteCollection.insertOne(upvote)
+      res.send(result)
+
+    })
+    // upvote get on ui
+    app.get("/upvotes", async (req, res) => {
+      const postId = req.query.postId;
+      const result = await upVoteCollection.find({ postId: postId }).toArray();
+      res.send(result);
+    });
+
+    // downvote post
+    app.post('/downvote', async (req, res) => {
+      const downvote = req.body;
+      const result = await downvoteCollection.insertOne(downvote)
+      res.send(result)
+
+    })
+
+    // doen vote get
+    app.get("/downvotes", async (req, res) => {
+      const postId = req.query.postId;
+      const result = await downvoteCollection.find({ postId: postId }).toArray();
+      res.send(result);
+    });
+
+
+
+
+
+
+
+
+    
     // Connect the client to the server	(optional starting in v4.7)
     
     // await client.connect();
