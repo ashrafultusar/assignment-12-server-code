@@ -361,7 +361,7 @@ async function run() {
 
     })
 
-    // doen vote get
+    // down vote get
     app.get("/downvotes", async (req, res) => {
       const postId = req.query.postId;
       const result = await downvoteCollection.find({ postId: postId }).toArray();
@@ -369,10 +369,7 @@ async function run() {
     });
 
 
-
-
-
-
+  
 
 
     
