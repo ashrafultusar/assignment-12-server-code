@@ -45,6 +45,7 @@ async function run() {
     const tagCollection = client.db("ConvoHub").collection("tag");
     const upVoteCollection = client.db("ConvoHub").collection("upvote");
     const downvoteCollection = client.db("ConvoHub").collection("downvote");
+    const reportCollection = client.db("ConvoHub").collection("report");
 
     // jwt api
     app.post("/jwt", async (req, res) => {
@@ -167,7 +168,9 @@ async function run() {
       const search = req.query;
       const query = {
         tag: {
-          $regex: search.search,$options: "i"},
+          $regex: search.search,
+          $options: "i",
+        },
       };
 
       const result = await allPostCollection
@@ -185,9 +188,7 @@ async function run() {
       res.send(result);
     });
 
-
-
-    app.get('/comments/:postId', async (req, res) => {
+    app.get("/comments/:postId", async (req, res) => {
       try {
         const comments = await Comment.find({ postId: req.params.postId });
         res.json(comments);
@@ -195,7 +196,6 @@ async function run() {
         res.status(500).send(err);
       }
     });
-
 
     // add post on db
     app.post("/post", async (req, res) => {
@@ -278,19 +278,20 @@ async function run() {
     });
 
     // upload comment
-
     app.post("/comment", async (req, res) => {
       try {
         const commentData = req.body;
         await commentCollection.insertOne(commentData);
-        
+
         // Fetch all comments for the given postId
-        const comments = await commentCollection.find({ postId: commentData.postId }).toArray();
-        
+        const comments = await commentCollection
+          .find({ postId: commentData.postId })
+          .toArray();
+
         res.send(comments);
       } catch (err) {
-        console.error('Failed to insert comment', err);
-        res.status(500).send({ error: 'Failed to insert comment' });
+        console.error("Failed to insert comment", err);
+        res.status(500).send({ error: "Failed to insert comment" });
       }
     });
 
@@ -300,7 +301,13 @@ async function run() {
       const result = await commentCollection.find({ postId: postId }).toArray();
       res.send(result);
     });
-    
+
+    // get all coment
+    app.get("/allcoment", async (req, res) => {
+      const result = await commentCollection.find().toArray();
+      res.send(result);
+    });
+
     // payment intent
     app.post("/create-payment-intent", async (req, res) => {
       const price = req.body.price;
@@ -317,7 +324,7 @@ async function run() {
         },
       });
       res.send({ clientSecret: client_secret });
-    }); 
+    });
 
     // payment
     app.post("/payment", async (req, res) => {
@@ -347,17 +354,16 @@ async function run() {
       res.send({
         users,
         posts,
-        comment
+        comment,
       });
     });
 
     // upvote post
-    app.post('/upvote', async (req, res) => {
+    app.post("/upvote", async (req, res) => {
       const upvote = req.body;
-      const result = await upVoteCollection.insertOne(upvote)
-      res.send(result)
-
-    })
+      const result = await upVoteCollection.insertOne(upvote);
+      res.send(result);
+    });
     // upvote get on ui
     app.get("/upvotes", async (req, res) => {
       const postId = req.query.postId;
@@ -366,27 +372,69 @@ async function run() {
     });
 
     // downvote post
-    app.post('/downvote', async (req, res) => {
+    app.post("/downvote", async (req, res) => {
       const downvote = req.body;
-      const result = await downvoteCollection.insertOne(downvote)
-      res.send(result)
-
-    })
+      const result = await downvoteCollection.insertOne(downvote);
+      res.send(result);
+    });
 
     // down vote get
     app.get("/downvotes", async (req, res) => {
       const postId = req.query.postId;
-      const result = await downvoteCollection.find({ postId: postId }).toArray();
+      const result = await downvoteCollection
+        .find({ postId: postId })
+        .toArray();
+      res.send(result);
+    });
+
+    // report comment post
+    app.post("/report", async (req, res) => {
+      const reportData = req.body;
+      const result = await reportCollection.insertOne(reportData);
+      res.send(result);
+    });
+
+    // repoet comment get
+    app.get("/reports", async (req, res) => {
+      const result = await reportCollection.find().toArray();
       res.send(result);
     });
 
 
-  
+
+    //comment delete
+    // app.delete("/comment/:postId", async (req, res) => {
+    //   const id = req.params.postId;
+    //   const query = { _id: new ObjectId(id) };
+    //   const result = await commentCollection.deleteOne(query);
+    //   res.send(result);
+    // });
+    
+    app.delete("/comment/:commentId", async (req, res) => {
+      const id = req.params.commentId;
+      const query = { _id: new ObjectId(id) };
+    
+      try {
+        const result = await commentCollection.deleteOne(query);
+        if (result.deletedCount === 1) {
+          res.status(200).send({ message: "Comment successfully deleted." });
+        } else {
+          res.status(404).send({ message: "Comment not found." });
+        }
+      } catch (error) {
+        res.status(500).send({ message: "Failed to delete comment.", error });
+      }
+    });
+    
+
+   
 
 
     
+
+
     // Connect the client to the server	(optional starting in v4.7)
-    
+
     // await client.connect();
     // Send a ping to confirm a successful connection
     // await client.db("admin").command({ ping: 1 });
