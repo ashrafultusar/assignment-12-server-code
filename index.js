@@ -48,63 +48,56 @@ async function run() {
     const reportCollection = client.db("ConvoHub").collection("report");
 
     // jwt api
+    // app.post("/jwt", async (req, res) => {
+    //   const user = req.body;
+    //   const token = jwt.sign(user, process.env.ASSESS_TOKEN_SECRET, {
+    //     expiresIn: "1h",
+    //   });
+    //   // res.send({token})
+    //   res
+    //     .cookie("token", token, {
+    //       httpOnly: true,
+    //       secure: process.env.NODE_ENV === "production",
+    //       sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+    //     })
+    //     .send({ success: true });
+    // });
     app.post("/jwt", async (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ASSESS_TOKEN_SECRET, {
         expiresIn: "1h",
       });
-      // res.send({token})
-      res
-        .cookie("token", token, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
-        })
-        .send({ success: true });
+      res.send({ token });
     });
 
-    // const verifyToken = (req, res, next) => {
-    //   console.log("inside verify token", req.headers.authorization);
-    //   if (!req.headers.authorization) {
-    //     return res.status(401).send({ message: "unauthorize access" });
-    //   }
-    //   const token = req.headers.authorization.split(" ")[1];
-    //   jwt.verify(token, process.env.ASSESS_TOKEN_SECRET, (err, decoded) => {
-    //     if (err) {
-    //       return res.status(401).send({ message: "unauthorize access" });
-    //     }
-    //     req.decoded = decoded;
-    //     next();
-    //   });
-    // };
-
     const verifyToken = async (req, res, next) => {
-      const token = req.cookies?.token;
-      console.log(token);
-      if (!token) {
-        return res.status(401).send({ message: "unauthorized access" });
+      console.log(req.headers.authorization);
+      if (!req.headers.authorization) {
+        return res.status(401).send({message: 'forbidden access'})
       }
-      jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+      const token = req.headers.authorization.split(' ')[1];
+      
+      jwt.verify(token, process.env.ASSESS_TOKEN_SECRET, (err, decoded) => {
         if (err) {
-          console.log(err);
-          return res.status(401).send({ message: "unauthorized access" });
+          return res.status(401).send({message: 'forbidden-access'})
         }
-        req.user = decoded;
-        next();
-      });
+        req.decoded = decoded;
+        next()
+      })
+
     };
 
     // verify admin middleWare
-    const verifyAdmin = async (req, res, next) => {
-      const user = req.user;
-      const query = { email: user?.email };
-      const result = await userCollection.findOne(query);
-      if (!result || result?.role !== "Admin") {
-        return res.status(401).send({ message: "forbidden access" });
-      }
+    // const verifyAdmin = async (req, res, next) => {
+    //   const user = req.user;
+    //   const query = { email: user?.email };
+    //   const result = await userCollection.findOne(query);
+    //   if (!result || result?.role !== "Admin") {
+    //     return res.status(401).send({ message: "forbidden access" });
+    //   }
 
-      next();
-    };
+    //   next();
+    // };
 
     // save user data in db
     app.put("/user", async (req, res) => {
@@ -198,46 +191,10 @@ async function run() {
     });
 
     // add post on db
-    // app.post("/post", async (req, res) => {
-    //   const email = req.body.email;
-    //   const roomData = req.body;
-
-    //   console.log(req.body, "body");
-    //   try {
-    //     // Fetch the user to check their badge status
-    //     const user = await userCollection.findOne({ email: email });
-    //     console.log(user);
-    //     if (!user) {
-    //       return res.status(404).send({ message: "User not found" });
-    //     }
-
-    //     if (user.badges === "bronze") {
-    //       // Check the post count for the normal user
-    //       const postCount = await allPostCollection.countDocuments({
-    //         email: email,
-    //       });
-    //       console.log(postCount, "post count");
-    //       if (postCount > 5) {
-    //         return res.send({
-    //           message:
-    //             "You have reached the limit of 5 posts. Become a member to add more posts.",
-    //           redirectToMembership: true,
-    //         });
-    //       }
-    //     }
-
-    //     // If the user is premium or has not exceeded the post limit, insert the new post
-    //     const result = await allPostCollection.insertOne(roomData);
-    //     res.send(result);
-    //   } catch (error) {
-    //     console.error("Error adding post:", error);
-    //     res.status(500).send({ message: " Error" });
-    //   }
-    // });
     app.post("/post", async (req, res) => {
       const email = req.body.email;
       const roomData = req.body;
-    
+
       console.log(req.body, "body");
       try {
         // Fetch the user to check their badge status
@@ -246,32 +203,33 @@ async function run() {
         if (!user) {
           return res.status(404).send({ message: "User not found" });
         }
-    
+
         if (user.badges === "bronze") {
-          // Check the post count for the bronze user
-          const postCount = await allPostCollection.countDocuments({ email: email });
+          // Check the post count for the normal user
+          const postCount = await allPostCollection.countDocuments({
+            email: email,
+          });
           console.log(postCount, "post count");
-          if (postCount >= 5) {  // Assuming 5 is the limit for bronze users
+          if (postCount > 5) {
             return res.send({
-              message: "You have reached the limit of 5 posts. Become a member to add more posts.",
+              message:
+                "You have reached the limit of 5 posts. Become a member to add more posts.",
               redirectToMembership: true,
             });
           }
         }
-        
-        // Allow the post creation
-        await allPostCollection.insertOne(roomData);
-        return res.send({ message: "Post created successfully" });
+
+        // If the user is premium or has not exceeded the post limit, insert the new post
+        const result = await allPostCollection.insertOne(roomData);
+        res.send(result);
       } catch (error) {
-        console.error(error);
-        return res.status(500).send({ message: "An error occurred" });
+        console.error("Error adding post:", error);
+        res.status(500).send({ message: " Error" });
       }
     });
-    
-
 
     // get post from user
-    app.get("/mypost/:email", async (req, res) => {
+    app.get("/mypost/:email",verifyToken, async (req, res) => {
       const email = req.params.email;
       let query = { email: email };
       const result = await allPostCollection.find(query).toArray();
@@ -313,50 +271,22 @@ async function run() {
     });
 
     // upload comment
-    // app.post("/comment", async (req, res) => {
-    //   try {
-    //     const commentData = req.body;
-    //     await commentCollection.insertOne(commentData);
-
-    //     // Fetch all comments for the given postId
-    //     const comments = await commentCollection
-    //       .find({ postId: commentData.postId })
-    //       .toArray();
-
-    //     res.send(comments);
-    //   } catch (err) {
-    //     console.error("Failed to insert comment", err);
-    //     res.status(500).send({ error: "Failed to insert comment" });
-    //   }
-    // });
-
-    app.post("/comment", async (req, res) => {
+    app.post("/comment",verifyToken, async (req, res) => {
       try {
         const commentData = req.body;
-        const { userId, postId } = commentData;
-    
-        // Check if the user has already commented on this post
-        const existingComment = await commentCollection.findOne({ userId, postId });
-        
-        if (existingComment) {
-          return res.status(400).send({ error: "User has already commented on this post" });
-        }
-    
-        // Insert the new comment
         await commentCollection.insertOne(commentData);
-    
+
         // Fetch all comments for the given postId
         const comments = await commentCollection
-          .find({ postId })
+          .find({ postId: commentData.postId })
           .toArray();
-    
+
         res.send(comments);
       } catch (err) {
         console.error("Failed to insert comment", err);
         res.status(500).send({ error: "Failed to insert comment" });
       }
     });
-    
 
     // comment load
     app.get("/comments", async (req, res) => {
@@ -390,7 +320,7 @@ async function run() {
     });
 
     // payment
-    app.post("/payment", async (req, res) => {
+    app.post("/payment",verifyToken, async (req, res) => {
       const paymentData = req.body;
       const result = await paymentCollection.insertOne(paymentData);
       res.send(result);
@@ -408,7 +338,7 @@ async function run() {
     });
 
     // admin profile statistic
-    app.get("/admin-stats", async (req, res) => {
+    app.get("/admin-stats",verifyToken, async (req, res) => {
       const users = await userCollection.estimatedDocumentCount();
 
       const posts = await allPostCollection.estimatedDocumentCount();
@@ -463,60 +393,39 @@ async function run() {
       res.send(result);
     });
 
-
-
     //comment delete
-    // app.delete("/comment/:postId", async (req, res) => {
-    //   const id = req.params.postId;
-    //   const query = { _id: new ObjectId(id) };
-    //   const result = await commentCollection.deleteOne(query);
-    //   res.send(result);
-    // });
-    
-    // app.delete("/comment/:commentId", async (req, res) => {
-    //   const id = req.params.commentId;
-    //   const query = { _id: new ObjectId(id) };
-    
-    //   try {
-    //     const result = await commentCollection.deleteOne(query);
-    //     if (result.deletedCount === 1) {
-    //       res.status(200).send({ message: "Comment successfully deleted." });
-    //     } else {
-    //       res.status(404).send({ message: "Comment not found." });
-    //     }
-    //   } catch (error) {
-    //     res.status(500).send({ message: "Failed to delete comment.", error });
-    //   }
-    // });
     
 
-   
-app.delete("/report/:reportId", async (req, res) => {
-  const reportId = req.params.reportId;
-  const { commentId } = req.body;
+    app.delete("/report/:reportId", async (req, res) => {
+      const reportId = req.params.reportId;
+      const { commentId } = req.body;
 
-  try {
-    const reportQuery = { _id: new ObjectId(reportId) };
-    const commentQuery = { _id: new ObjectId(commentId) };
+      try {
+        const reportQuery = { _id: new ObjectId(reportId) };
+        const commentQuery = { _id: new ObjectId(commentId) };
 
-    // Delete the report
-    const reportResult = await reportCollection.deleteOne(reportQuery);
+        // Delete the report
+        const reportResult = await reportCollection.deleteOne(reportQuery);
 
-    // Delete the comment
-    const commentResult = await commentCollection.deleteOne(commentQuery);
+        // Delete the comment
+        const commentResult = await commentCollection.deleteOne(commentQuery);
 
-    if (reportResult.deletedCount === 1 && commentResult.deletedCount === 1) {
-      res.status(200).send({ message: "Report and associated comment successfully deleted." });
-    } else {
-      res.status(404).send({ message: "Report or comment not found." });
-    }
-  } catch (error) {
-    res.status(500).send({ message: "Failed to delete report or comment.", error });
-  }
-});
-
-    
-
+        if (
+          reportResult.deletedCount === 1 &&
+          commentResult.deletedCount === 1
+        ) {
+          res.status(200).send({
+            message: "Report and associated comment successfully deleted.",
+          });
+        } else {
+          res.status(404).send({ message: "Report or comment not found." });
+        }
+      } catch (error) {
+        res
+          .status(500)
+          .send({ message: "Failed to delete report or comment.", error });
+      }
+    });
 
     // Connect the client to the server	(optional starting in v4.7)
 
