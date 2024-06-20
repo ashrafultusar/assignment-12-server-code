@@ -185,6 +185,18 @@ async function run() {
       res.send(result);
     });
 
+
+
+    app.get('/comments/:postId', async (req, res) => {
+      try {
+        const comments = await Comment.find({ postId: req.params.postId });
+        res.json(comments);
+      } catch (err) {
+        res.status(500).send(err);
+      }
+    });
+
+
     // add post on db
     app.post("/post", async (req, res) => {
       const email = req.body.email;
