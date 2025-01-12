@@ -47,21 +47,7 @@ async function run() {
     const downvoteCollection = client.db("ConvoHub").collection("downvote");
     const reportCollection = client.db("ConvoHub").collection("report");
 
-    // jwt api
-    // app.post("/jwt", async (req, res) => {
-    //   const user = req.body;
-    //   const token = jwt.sign(user, process.env.ASSESS_TOKEN_SECRET, {
-    //     expiresIn: "1h",
-    //   });
-    //   // res.send({token})
-    //   res
-    //     .cookie("token", token, {
-    //       httpOnly: true,
-    //       secure: process.env.NODE_ENV === "production",
-    //       sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
-    //     })
-    //     .send({ success: true });
-    // });
+   
     app.post("/jwt", async (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ASSESS_TOKEN_SECRET, {
@@ -194,8 +180,6 @@ async function run() {
     app.post("/post", async (req, res) => {
       const email = req.body.email;
       const roomData = req.body;
-
-      console.log(req.body, "body");
       try {
         // Fetch the user to check their badge status
         const user = await userCollection.findOne({ email: email });
